@@ -1,60 +1,37 @@
-import React from 'react'
-import logo from './logo.svg'
-import './App.css'
+import React, { Component, lazy, Suspense } from 'react';
 
-// Context创建
-const BatterContext = React.createContext()
-
-class Leaf extends React.Component {
-  // 只能叫contextType
-  static contextType = BatterContext
-  render() {
-    const batter = this.context
-    return <h1>batter:{batter}</h1>
-  }
-}
-
-class Middle extends React.Component {
-  render() {
-    return <Leaf />
-  }
-}
-
-class App extends React.Component {
+// /*webpackChunkName:'about'*/ =>给异步加载的文件设置别名
+const About = lazy(() => import(/*webpackChunkName:'about'*/ './About.jsx'));
+// const About = lazy(() => import('./About.jsx'));
+class App extends Component {
   state = {
-    power: 60,
+    hasError: false,
+  };
+  // 使用 create-react-app 创建的项目，在开发环境，就算使用了 componentDidCatch 或者 getDerivedStateFromError，错误依然会被抛出，在 build 后，错误将会捕获，不会导致整个项目卸载
+  static getDerivedStateFromError(error) {
+    // 更新 state 使下一次渲染能够显示降级后的 UI
+    return { hasError: true };
   }
+  // componentDidCatch(error, errorInfo) {
+  //   this.setState({
+  //     hasError: true,
+  //   });
+  //   console.log(this.state.hasError);
+  // }
+
   render() {
-    const { power } = this.state
+    if (this.state.hasError) {
+      return <div>{this.state.hasError}</div>;
+    }
     return (
-      <BatterContext.Provider value={power}>
-        <button type="button" onClick={() => this.setState({ power: power - 1 })}>
-          click
-        </button>
-        <Middle></Middle>
-      </BatterContext.Provider>
-    )
+      <div>
+        <Suspense fallback={<div>loading....</div>}>
+          {this.state.hasError}
+          <About />
+        </Suspense>
+      </div>
+    );
   }
 }
-// function App() {
-//   return (
-//     <div className="App">
-//       <header className="App-header">
-//         <img src={logo} className="App-logo" alt="logo" />
-//         <p>
-//           Edit <code>src/App.js</code> and save to reload.
-//         </p>
-//         <a
-//           className="App-link"
-//           href="https://reactjs.org"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           Learn React
-//         </a>
-//       </header>
-//     </div>
-//   );
-// }
 
-export default App
+export default App;
