@@ -3,9 +3,10 @@ import './App.css'
 /**
  * 问题一:为什么设置state值时要使用函数形式
  * 问题二:为什么使用useCallback
+ * 问题三:什么时候使用memo
  */
 let isSeq = new Date()
-function Control(props) {
+const Control = memo(function Control(props) {
   const { addTodo } = props
   const inputRef = useRef()
 
@@ -37,9 +38,9 @@ function Control(props) {
       </form>
     </div>
   )
-}
+})
 
-function TodosItem(props) {
+const TodosItem = memo(function TodosItem(props) {
   const {
     todo: { id, text, complete },
     toggleTodo,
@@ -59,8 +60,9 @@ function TodosItem(props) {
       <button onClick={onRemove}> &#xd7;</button>
     </li>
   )
-}
-function Todos(props) {
+})
+
+const Todos = memo(function Todos(props) {
   const { todos, removeTodo, toggleTodo } = props
   return (
     <ul>
@@ -74,7 +76,8 @@ function Todos(props) {
       ))}
     </ul>
   )
-}
+})
+
 const LS_KEY = '_$todos_'
 function TodoList() {
   const [todos, setTodos] = useState([])
