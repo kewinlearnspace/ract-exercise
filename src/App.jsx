@@ -1,74 +1,111 @@
-import React, {
-  useState,
-  useMemo,
-  memo,
-  useCallback,
-  useRef,
-  PureComponent,
-  useEffect,
-} from 'react'
-
+import React, { useEffect, useState, useCallback, memo, useRef } from 'react'
+import './App.css'
 /**
- * useRef
- * 作用:获取子组件或者DOM节点的句柄。渲染周期之间共享数据存储(state也可以跨域渲染周期保存,单state的赋值会触发视图渲染,ref不会)
- * 应用场景:ref组件成员上有函数需要调用。访问上一次渲染的数据,甚至是state,就把其同步到ref中,下一次渲染时就能获取到
- *
- * 问题:如何判断一个组件,在本次渲染和上一次渲染中有没有重新创建?
+ * 问题一:为什么设置state值时要使用函数形式
+ * 问题二:为什么使用useCallback
  */
+let isSeq = new Date()
+function Control(props) {
+  const { addTodo } = props
+  const inputRef = useRef()
 
-class Counter extends PureComponent {
-  speak() {
-    console.log('Counter.speak')
-  }
-  render() {
-    const { props } = this
-    return (
-      <div>
-        <h1 onClick={props.onClick}>count:{props.count}</h1>
-      </div>
-    )
-  }
-}
-// useMemo 和 useCallback作为优化手段,不能依赖其是否触发重新渲染
-function App(props) {
-  const [count, setCount] = useState(0)
-  const [clickCount, setClickCount] = useState(0)
-  let timer = useRef()
-  const counterRef = useRef()
+  // onSubmit没有向任何子组件传递,所以不需要useCallback?
+  const onSubmit = (event) => {
+    event.preventDefault()
+    const newText = inputRef.current.value.trim()
 
-  const double = useMemo(() => {
-    return count * 2
-  }, [count === 3])
-  const onClick = useCallback(() => {
-    console.log('click')
-    setClickCount((clickCount) => clickCount + 1)
-    counterRef.current.speak()
-  }, [counterRef])
-
-  useEffect(() => {
-    timer.current = setInterval(() => {
-      setCount((count) => count + 1)
-    }, 1000)
-  }, [])
-
-  useEffect(() => {
-    if (count >= 10) {
-      clearInterval(timer.current)
+    if (newText.length === 0) {
+      return
     }
-  })
+    addTodo({
+      id: ++isSeq,
+      text: newText,
+      complete: false,
+    })
+    inputRef.current.value = ''
+  }
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => {
-          setCount(count + 1)
-        }}
-      >
-        click{count}
-      </button>
-      <Counter ref={counterRef} count={double} onClick={onClick} />
+    <div className="control">
+      <h1>Todo</h1>
+      <form onSubmit={onSubmit}>
+        <input
+          type="text"
+          ref={inputRef}
+          className="new-todo"
+          placeholder="Waht needs to be done?"
+        />
+      </form>
     </div>
   )
 }
 
-export default App
+function TodosItem(props) {
+  const {
+    todo: { id, text, complete },
+    toggleTodo,
+    removeTodo,
+  } = props
+
+  const onchange = () => {
+    toggleTodo(id)
+  }
+  const onRemove = () => {
+    removeTodo(id)
+  }
+  return (
+    <li className="todo-item">
+      <input type="checkbox" onChange={onchange} checked={complete}></input>
+      <label className={complete ? 'complete' : ''}>{text}</label>
+      <button onClick={onRemove}> &#xd7;</button>
+    </li>
+  )
+}
+function Todos(props) {
+  const { todos, removeTodo, toggleTodo } = props
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <TodosItem
+          key={todo.id}
+          todo={todo}
+          removeTodo={removeTodo}
+          toggleTodo={toggleTodo}
+        ></TodosItem>
+      ))}
+    </ul>
+  )
+}
+const LS_KEY = '_$todos_'
+function TodoList() {
+  const [todos, setTodos] = useState([])
+  // 设置值传入函数形式,避免对原数据的过度依赖
+  const addTodo = useCallback((todo) => {
+    setTodos((todos) => [...todos, todo])
+  }, [])
+
+  const removeTodo = useCallback((id) => {
+    setTodos((todos) => todos.filter((todo) => todo.id !== id))
+  }, [])
+
+  const toggleTodo = useCallback((id) => {
+    setTodos((todos) =>
+      todos.map((todo) => (todo.id === id ? { ...todo, complete: !todo.complete } : todo))
+    )
+  }, [])
+  // 仅执行一次
+  useEffect(() => {
+    const todos = JSON.parse(localStorage.getItem(LS_KEY) || '[]')
+    setTodos(todos)
+  }, [])
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(todos))
+  }, [todos])
+  return (
+    <div className="todo-list">
+      <Control addTodo={addTodo}></Control>
+      <Todos removeTodo={removeTodo} toggleTodo={toggleTodo} todos={todos}></Todos>
+    </div>
+  )
+}
+
+export default TodoList
